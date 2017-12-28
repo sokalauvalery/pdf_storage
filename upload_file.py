@@ -112,7 +112,6 @@ class UploadHandler(BaseHandler):
         file_storage_path = os.path.join(user_storage_path, final_filename)
         with open(file_storage_path, 'wb') as f:
             f.write(file_to_upload['body'])
-        images = pdf2image.convert_from_path(os.path.abspath(file_storage_path))
         file_record = File(name=original_fname, storage_location=file_storage_path, user=current_user)
         self.db.add(file_record)
         self.db.commit()
