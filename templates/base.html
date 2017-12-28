@@ -1,0 +1,39 @@
+<!doctype html>
+<html>
+  <head>
+      {% block head %}
+
+    <title>{% block title %}{% end %} - Access log parser</title>
+    {% end %}
+  </head>
+  <link href="{{ static_url("bootstrap-3.3.7-dist/css/bootstrap.min.css") }}" rel="stylesheet">
+  <script src="{{ static_url("bootstrap-3.3.7-dist/js/bootstrap.min.js") }}"></script>
+  <body>
+      <div id="header">
+      {% block header %}
+      {% end %}
+    </div>
+
+    <nav class="navbar navbar-default">
+        <ul class="nav navbar-nav">
+            <li role="presentation" class="active"><a href="">Home</a></li>
+        </ul>
+          <ul class="nav navbar-nav navbar-right">
+              {% if username %}
+                    <li><a href="#"><span class="glyphicon glyphicon-user"></span> {{ username }}</a></li>
+              {% end %}
+          <li><a href="{{ reverse_url('logout') }}"><span class="glyphicon glyphicon-log-in"></span> Logout</a></li>
+        </ul>
+    </nav>
+
+    <div class="container">
+          <div id="content">{% block content %}{% end %}</div>
+    </div>
+
+
+    <div id="footer">
+      {% block footer %}
+      {% end %}
+    </div>
+  </body>
+</html>

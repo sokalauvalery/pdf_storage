@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block content %}
+
+<form class="form-inline"  enctype="multipart/form-data" action="{{ reverse_url('upload') }}" method="post">
+    <label for="id_file">Upload new file: </label>
+    <input class="form-control" id="id_file" name="file" type="file" required="">
+    <input class="btn btn-primary" type="submit" value="Upload">
+
+</form>
+
+{% if users_files %}
+<table class="table table-striped">
+        <tr>
+            <td>Username</td>
+            <td>File</td>
+            <td>Upload date</td>
+        </tr>
+    {% for ufile in users_files %}
+        <tr>
+            <td>{{ ufile.username }} </td>
+            <td><a href="{{ reverse_url('download_file', ufile.file_id) }}">{{ ufile.filename }}</a></td>
+            <td>{{ ufile.upload_date }}</td>
+        </tr>
+    {% end %}
+
+    </table>
+{% else %}
+    <p>There is no uploaded files yet.</p>
+{% end %}
+
+{% end %}
