@@ -99,21 +99,6 @@ class UploadHandler(BaseHandler):
         self.redirect(self.get_argument("next", self.reverse_url("main")))
 
 
-class FileDownloadHandler(BaseHandler):
-    def get(self, file_id):
-        file = self.db.query(File).get(file_id)
-        buf_size = 4096
-        with open(file.storage_location, 'rb') as f:
-            self.set_header("Content-Type", 'application/pdf; charset="utf-8"')
-            self.set_header("Content-Disposition", "attachment; filename={}".format(file.name))
-            while True:
-                data = f.read(buf_size)
-                if not data:
-                    break
-                self.write(data)
-        self.finish()
-
-
 class DownloadHandler(BaseHandler):
     # TODO: Use composite design pattern here!
     downloadable_object_registry = {'file': File, 'page': Page}
