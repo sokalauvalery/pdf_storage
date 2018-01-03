@@ -1,0 +1,14 @@
+<h4 class="modal-title">{{ file.name }} pages </h4>(click to download)
+
+{% if pages %}
+<table class="table table-striped">
+    {% for page in pages %}
+        <tr>
+            <td><a href="{{ reverse_url('download_file', 'page', page.id) }}">{{ page.name  }}</a></td>
+        </tr>
+    {% end %}
+    </table>
+
+{% else %}
+    <p>There is no pages for this file.</p>
+{% end %}

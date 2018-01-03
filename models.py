@@ -19,7 +19,15 @@ class User(Base):
         return self.username
 
 
-class File(Base):
+class Downloadable:
+    def get_storage_location(self):
+        raise NotImplemented
+
+    def get_output_filename(self):
+        raise NotImplemented
+
+
+class File(Base, Downloadable):
     __tablename__ = 'files'
     id = Column(Integer, primary_key=True)
     name = Column(String(200), nullable=False)
@@ -28,6 +36,31 @@ class File(Base):
 
     user_id = Column(Integer, ForeignKey('users.id'))
     user = relationship(User)
+
+    def get_storage_location(self):
+        return self.storage_location
+
+    def get_output_filename(self):
+        return self.name
+
+    def __repr__(self):
+        return self.name
+
+
+class Page(Base, Downloadable):
+    __tablename__ = 'pages'
+    id = Column(Integer, primary_key=True)
+    name = Column(String(200), nullable=False)
+    storage_location = Column(String(200), nullable=False)
+
+    file_id = Column(Integer, ForeignKey('files.id'))
+    file = relationship(File)
+
+    def get_storage_location(self):
+        return self.storage_location
+
+    def get_output_filename(self):
+        return '{f} - {p}'.format(f=self.file.name, p=self.name)
 
     def __repr__(self):
         return self.name
