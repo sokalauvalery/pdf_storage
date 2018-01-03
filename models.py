@@ -3,9 +3,10 @@ from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 import datetime
+from config import config
 
 
-engine = create_engine('sqlite:///pdf_storage.db', echo=True)
+engine = create_engine(config['DB']['connection_string'], echo=True)
 
 Base = declarative_base()
 
