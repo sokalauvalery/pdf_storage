@@ -1,11 +1,11 @@
 from __future__ import print_function
-from wand.image import Image
 import io
 import PyPDF2
 import os
 
 
 def pdf_page_to_png(src_pdf, pagenum, resolution=72):
+    from wand.image import Image
     """
     Returns specified PDF page as wand.image.Image png.
     :param PyPDF2.PdfFileReader src_pdf: PDF from which to take pages.

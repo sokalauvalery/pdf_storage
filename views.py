@@ -1,4 +1,5 @@
 import tornado
+from tornado import gen
 from collections import namedtuple
 from models import *
 import os
@@ -6,6 +7,7 @@ import random
 import string
 from pdf_tools import extract_pdf_pages_as_images
 from config import constants
+from concurrent.futures import ThreadPoolExecutor
 
 
 class BaseHandler(tornado.web.RequestHandler):
@@ -29,9 +31,11 @@ class BaseHandler(tornado.web.RequestHandler):
 
 
 class LoginHandler(BaseHandler):
+    @gen.coroutine
     def get(self):
         self.render("templates/login.html")
 
+    @gen.coroutine
     def post(self):
         username = self.get_argument("name")
         user = User(username=username)
@@ -51,23 +55,41 @@ class IndexHandler(BaseHandler):
     @tornado.web.authenticated
     def get(self):
         UserFile = namedtuple('UserFile', ['username', 'filename', 'path', 'upload_date', 'file_id'])
-        users_files = self.db.query(User, File).filter(User.id == File.user_id).order_by(File.upload_date).all()
+        users_files = self.db.query(User, File).filter(User.id == File.user_id).\
+            order_by(File.upload_date).all()
+        # TODO: show failed tasks only for current user
+        task_list = self.db.query(RunningTask).all()
+        running_tasks = [task.file_id for task in task_list if task.state == TaskState.running]
+        failed_tasks = [task.file_id for task in task_list if task.state == TaskState.failed]
         # files_pages = self.db.query(Page, File).filter(File.id == Page.file_id).all()
         users_files_view_data = []
+        incomplete_uploading = []
+        failed_uploading = []
         for ufile in users_files:
-            users_files_view_data.append(UserFile(username=ufile.User.username,
-                                                  filename=ufile.File.name,
-                                                  upload_date=ufile.File.upload_date.strftime('%Y-%m-%d %H:%M:%S'),
-                                                  path=ufile.File.storage_location,
-                                                  file_id=ufile.File.id))
-        # TODO: remove milliseconds from upload_date
-        self.render("templates/index.html", username=self.current_user, users_files=users_files_view_data)
+            file_meta = UserFile(username=ufile.User.username,
+                                 filename=ufile.File.name,
+                                 upload_date=ufile.File.upload_date.strftime('%Y-%m-%d %H:%M:%S'),
+                                 path=ufile.File.storage_location,
+                                 file_id=ufile.File.id)
+            if ufile.File.id in running_tasks:
+                incomplete_uploading.append(file_meta)
+            elif ufile.File.id in failed_tasks:
+                failed_uploading.append(file_meta)
+            else:
+                users_files_view_data.append(file_meta)
+
+        # TODO: add ajax queries to update upload tasks states
+        self.render("templates/index.html", username=self.current_user, users_files=users_files_view_data,
+                    incomplete_uploading=incomplete_uploading, failed_uploading=failed_uploading)
 
 
 class UploadHandler(BaseHandler):
+    executor = ThreadPoolExecutor(5)
+
     # TODO: obviously we have to use some task mechanism like celery, and work with task instance to handle big
     # files upload and to provide progress bar
-    @tornado.web.authenticated
+    @tornado.gen.coroutine
+    # @tornado.web.authenticated
     def post(self):
         current_user = self.current_user
         file_to_upload = self.request.files['file'][0]
@@ -85,24 +107,46 @@ class UploadHandler(BaseHandler):
         if not os.path.exists(user_storage_path):
             os.makedirs(user_storage_path)
         file_storage_path = os.path.join(user_storage_path, final_filename)
-        with open(file_storage_path, 'wb') as f:
-            f.write(file_to_upload['body'])
+
         file_record = File(name=original_fname, storage_location=file_storage_path, user=current_user)
         self.db.add(file_record)
         self.db.commit()
+
+        upload_task = RunningTask(file=file_record)
+        self.db.add(upload_task)
+        self.db.commit()
+
         user_pages_storage_path = os.path.join(user_storage_path, random_file_name)
         if not os.path.exists(user_pages_storage_path):
             os.makedirs(user_pages_storage_path)
-        for page, path in extract_pdf_pages_as_images(file_storage_path, user_pages_storage_path):
-            self.db.add(Page(name=page, storage_location=path, file=file_record))
-        self.db.commit()
+
+        self.executor.submit(self.upload_file, file_to_upload['body'], file_storage_path, file_record.id,
+                             user_pages_storage_path)
         self.redirect(self.get_argument("next", self.reverse_url("main")))
+
+    def upload_file(self, body, storage_path, file_id, user_pages_storage_path):
+        # TODO: add periodic task for cleanup
+        file_record = self.db.query(File).get(int(file_id))
+        task = self.db.query(RunningTask).filter(RunningTask.file_id == file_id).first()
+        try:
+            with open(storage_path, 'wb') as f:
+                f.write(body)
+            for page, path in extract_pdf_pages_as_images(file_record.storage_location, user_pages_storage_path):
+                self.db.add(Page(name=page, storage_location=path, file=file_record))
+            # Delete from running tasks table
+            self.db.delete(task)
+        # TODO: this is bad... i'am gonna fix it
+        except Exception as e:
+            task.state = TaskState.failed
+            task.message = str(e)
+        self.db.commit()
 
 
 class DownloadHandler(BaseHandler):
     # TODO: Use composite design pattern here!
     downloadable_object_registry = {'file': File, 'page': Page}
 
+    @gen.coroutine
     def get(self, object_type, object_id):
         download_obj_type = self.downloadable_object_registry.get(object_type)
         download_obj = self.db.query(download_obj_type).get(object_id)
@@ -119,6 +163,7 @@ class DownloadHandler(BaseHandler):
 
 
 class PagesView(BaseHandler):
+    @gen.coroutine
     def get(self, file_id):
         pages = self.db.query(Page).filter(Page.file_id == file_id).all()
         file = self.db.query(File).get(file_id)

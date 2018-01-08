@@ -4,6 +4,8 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 import datetime
 from config import config
+import enum
+from sqlalchemy_utils import types
 
 
 engine = create_engine(config['DB']['connection_string'], echo=True)
@@ -46,6 +48,22 @@ class File(Base, Downloadable):
 
     def __repr__(self):
         return self.name
+
+
+class TaskState(enum.Enum):
+    running = 1
+    failed = 2
+
+
+class RunningTask(Base):
+    __tablename__ = 'tasks'
+    id = Column(Integer, primary_key=True)
+
+    file_id = Column(Integer, ForeignKey('files.id'))
+    file = relationship(File)
+
+    state = Column(types.choice.ChoiceType(TaskState, impl=Integer()), default=TaskState.running)
+    message = Column(String(500), nullable=True)
 
 
 class Page(Base, Downloadable):

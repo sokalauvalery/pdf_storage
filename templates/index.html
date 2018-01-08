@@ -9,6 +9,22 @@ var view_pages = function (download_url) {
 }
 
 </script>
+
+<style>
+    .loader {
+    border: 16px solid #f3f3f3; /* Light grey */
+    border-top: 16px solid #3498db; /* Blue */
+    border-radius: 50%;
+    width: 12px;
+    height: 12px;
+    animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+</style>
 {% end %}
 {% block content %}
 
@@ -17,6 +33,39 @@ var view_pages = function (download_url) {
     <input class="form-control" id="id_file" name="file" type="file" required="">
     <input class="btn btn-primary" type="submit" value="Upload">
 </form>
+
+{% if incomplete_uploading %}
+<div id="incomplete uploads">
+    <div class="alert alert-info">
+        <!--<div class="loader"></div>-->
+        <div>
+            <strong>Uploading following files...!</strong>
+            {% for ufile in incomplete_uploading %}
+            <div>
+                {{ ufile.username }} - {{ ufile.filename }} - {{ ufile.upload_date }}
+            </div>
+        </div>
+
+    {% end %}
+    </div>
+</div>
+{% end %}
+
+{% if failed_uploading %}
+<div id="failed_uploading uploads">
+    <div class="alert alert-danger">
+        <div>
+            <strong>Uploading following files...!</strong>
+            {% for ufile in failed_uploading %}
+            <div>
+                {{ ufile.username }} - {{ ufile.filename }} - {{ ufile.upload_date }}
+            </div>
+        </div>
+
+    {% end %}
+    </div>
+</div>
+{% end %}
 
 {% if users_files %}
 <table class="table table-striped">
