@@ -55,7 +55,7 @@ class TaskState(enum.Enum):
     failed = 2
 
 
-class RunningTask(Base):
+class UploadTask(Base):
     __tablename__ = 'tasks'
     id = Column(Integer, primary_key=True)
 

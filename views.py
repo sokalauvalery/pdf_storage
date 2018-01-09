@@ -55,8 +55,8 @@ class IndexHandler(BaseHandler):
     @tornado.web.authenticated
     def get(self):
         UserFile = namedtuple('UserFile', ['username', 'filename', 'path', 'upload_date', 'file_id'])
-        users_files = self.db.query(User, File, RunningTask).filter(User.id == File.user_id).\
-            filter(RunningTask.file_id == File.id).order_by(File.upload_date).all()
+        users_files = self.db.query(User, File, UploadTask).filter(User.id == File.user_id).\
+            filter(UploadTask.file_id == File.id).order_by(File.upload_date).all()
         users_files_view_data = []
         incomplete_uploading = []
         failed_uploading = []
@@ -66,10 +66,10 @@ class IndexHandler(BaseHandler):
                                  upload_date=ufile.File.upload_date.strftime('%Y-%m-%d %H:%M:%S'),
                                  path=ufile.File.storage_location,
                                  file_id=ufile.File.id)
-            if ufile.File.id in [f.File.id for f in filter(lambda x: x.RunningTask.state == TaskState.running, users_files)]:
+            if ufile.File.id in [f.File.id for f in filter(lambda x: x.UploadTask.state == TaskState.running, users_files)]:
                 incomplete_uploading.append(file_meta)
-            elif ufile.File.id in [f.File.id for f in filter(lambda x: x.RunningTask.state == TaskState.failed, users_files)]:
-                failed_uploading.append((file_meta, ufile.RunningTask))
+            elif ufile.File.id in [f.File.id for f in filter(lambda x: x.UploadTask.state == TaskState.failed, users_files)]:
+                failed_uploading.append((file_meta, ufile.UploadTask))
             else:
                 users_files_view_data.append(file_meta)
 
@@ -107,7 +107,7 @@ class UploadHandler(BaseHandler):
         self.db.add(file_record)
         self.db.commit()
 
-        upload_task = RunningTask(file=file_record)
+        upload_task = UploadTask(file=file_record)
         self.db.add(upload_task)
         self.db.commit()
 
@@ -122,7 +122,7 @@ class UploadHandler(BaseHandler):
     def upload_file(self, body, storage_path, file_id, user_pages_storage_path):
         # TODO: add periodic task for cleanup
         file_record = self.db.query(File).get(int(file_id))
-        task = self.db.query(RunningTask).filter(RunningTask.file_id == file_id).first()
+        task = self.db.query(UploadTask).filter(UploadTask.file_id == file_id).first()
         try:
             with open(storage_path, 'wb') as f:
                 f.write(body)
