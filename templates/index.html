@@ -39,14 +39,15 @@ var view_pages = function (download_url) {
     <div class="alert alert-info">
         <!--<div class="loader"></div>-->
         <div>
-            <strong>Uploading following files...!</strong>
+            <strong>Uploading following files...</strong>
             {% for ufile in incomplete_uploading %}
             <div>
                 {{ ufile.username }} - {{ ufile.filename }} - {{ ufile.upload_date }}
             </div>
+            {% end %}
         </div>
 
-    {% end %}
+
     </div>
 </div>
 {% end %}
@@ -55,14 +56,15 @@ var view_pages = function (download_url) {
 <div id="failed_uploading uploads">
     <div class="alert alert-danger">
         <div>
-            <strong>Uploading following files...!</strong>
-            {% for ufile in failed_uploading %}
+            <strong>Failed to upload files files:</strong>
+            {% for ufile, task in failed_uploading %}
             <div>
-                {{ ufile.username }} - {{ ufile.filename }} - {{ ufile.upload_date }}
+                {{ ufile.username }} - {{ ufile.filename }} - {{ ufile.upload_date }} - {{ task.message }}
             </div>
+            {% end %}
         </div>
 
-    {% end %}
+
     </div>
 </div>
 {% end %}
