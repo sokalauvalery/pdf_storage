@@ -54,6 +54,12 @@ class LogoutHandler(BaseHandler):
 class IndexHandler(BaseHandler):
     @tornado.web.authenticated
     def get(self):
+        self.render("templates/index.html", username=self.current_user)
+
+
+class FileListHandler(BaseHandler):
+    @tornado.web.authenticated
+    def get(self):
         UserFile = namedtuple('UserFile', ['username', 'filename', 'path', 'upload_date', 'file_id'])
         users_files = self.db.query(User, File, UploadTask).filter(User.id == File.user_id).\
             filter(UploadTask.file_id == File.id).order_by(File.upload_date).all()
@@ -66,15 +72,17 @@ class IndexHandler(BaseHandler):
                                  upload_date=ufile.File.upload_date.strftime('%Y-%m-%d %H:%M:%S'),
                                  path=ufile.File.storage_location,
                                  file_id=ufile.File.id)
-            if ufile.File.id in [f.File.id for f in filter(lambda x: x.UploadTask.state == TaskState.running, users_files)]:
+            if ufile.File.id in [f.File.id for f in filter(lambda x: x.UploadTask.state == TaskState.running,
+                                                           users_files)]:
                 incomplete_uploading.append(file_meta)
-            elif ufile.File.id in [f.File.id for f in filter(lambda x: x.UploadTask.state == TaskState.failed, users_files)]:
+            elif ufile.File.id in [f.File.id for f in filter(lambda x: x.UploadTask.state == TaskState.failed and
+                                                                       x.User.id == self.get_current_user().id,
+                                                             users_files)]:
                 failed_uploading.append((file_meta, ufile.UploadTask))
             else:
                 users_files_view_data.append(file_meta)
 
-        # TODO: add ajax queries to update upload tasks states
-        self.render("templates/index.html", username=self.current_user, users_files=users_files_view_data,
+        self.render("templates/file_list.html", username=self.current_user, users_files=users_files_view_data,
                     incomplete_uploading=incomplete_uploading, failed_uploading=failed_uploading)
 
 
@@ -128,13 +136,13 @@ class UploadHandler(BaseHandler):
                 f.write(body)
             for page, path in extract_pdf_pages_as_images(file_record.storage_location, user_pages_storage_path):
                 self.db.add(Page(name=page, storage_location=path, file=file_record))
-            # Delete from running tasks table
-            self.db.delete(task)
+            task.state = TaskState.finished
         # TODO: this is bad... i'am gonna fix it
         except Exception as e:
             task.state = TaskState.failed
             task.message = str(e)
         self.db.commit()
+        self.application.publisher.submit('UPDATE_FILE_LIST')
 
 
 class DownloadHandler(BaseHandler):

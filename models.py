@@ -53,6 +53,7 @@ class File(Base, Downloadable):
 class TaskState(enum.Enum):
     running = 1
     failed = 2
+    finished = 3
 
 
 class UploadTask(Base):

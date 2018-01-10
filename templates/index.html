@@ -1,31 +1,13 @@
 {% extends "base.html" %}
+
 {% block header %}
 <script>
-
-var view_pages = function (download_url) {
-    $('.modal-body').load(download_url, function(){
-        $('#modal-pages').modal({show:true});
-    });
-}
-
+    var view_file_list = function () {
+        $('#file_list').load("{{ reverse_url('file_list') }}")
+    };
 </script>
-
-<style>
-    .loader {
-    border: 16px solid #f3f3f3; /* Light grey */
-    border-top: 16px solid #3498db; /* Blue */
-    border-radius: 50%;
-    width: 12px;
-    height: 12px;
-    animation: spin 2s linear infinite;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-</style>
 {% end %}
+
 {% block content %}
 
 <form class="form-inline"  enctype="multipart/form-data" action="{{ reverse_url('upload') }}" method="post">
@@ -34,88 +16,6 @@ var view_pages = function (download_url) {
     <input class="btn btn-primary" type="submit" value="Upload">
 </form>
 
-{% if incomplete_uploading %}
-<div id="incomplete uploads">
-    <div class="alert alert-info">
-        <!--<div class="loader"></div>-->
-        <div>
-            <strong>Uploading following files...</strong>
-            {% for ufile in incomplete_uploading %}
-            <div>
-                {{ ufile.username }} - {{ ufile.filename }} - {{ ufile.upload_date }}
-            </div>
-            {% end %}
-        </div>
-
-
-    </div>
-</div>
-{% end %}
-
-{% if failed_uploading %}
-<div id="failed_uploading uploads">
-    <div class="alert alert-danger">
-        <div>
-            <strong>Failed to upload files files:</strong>
-            {% for ufile, task in failed_uploading %}
-            <div>
-                {{ ufile.username }} - {{ ufile.filename }} - {{ ufile.upload_date }} - {{ task.message }}
-            </div>
-            {% end %}
-        </div>
-
-
-    </div>
-</div>
-{% end %}
-
-{% if users_files %}
-<table class="table table-striped">
-        <tr>
-            <td>Username</td>
-            <td>File</td>
-            <td>Upload date</td>
-            <td></td>
-        </tr>
-    {% for ufile in users_files %}
-        <tr>
-            <td>{{ ufile.username }} </td>
-            <td><a href="{{ reverse_url('download_file', 'file', ufile.file_id) }}">{{ ufile.filename }}</a></td>
-            <td>{{ ufile.upload_date }}</td>
-            <td>
-                <button type="button" class="btn btn-info btn-xs openBtn" data-toggle="modal" data-target="#modal-pages"
-                        onclick="view_pages('{{ reverse_url('view_pages', ufile.file_id)}}')">
-                    View pages
-                </button>
-            </td>
-        </tr>
-    {% end %}
-    </table>
-
-        <!-- Modal -->
-        <div id="modal-pages" class="modal fade" role="dialog">
-          <div class="modal-dialog">
-
-            <!-- Modal content-->
-            <div class="modal-content">
-              <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal">&times;</button>
-              </div>
-              <div class="modal-body">
-                <p>Some text in the modal.</p>
-              </div>
-              <div class="modal-footer">
-                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-
-
-{% else %}
-    <p>There is no uploaded files yet.</p>
-{% end %}
+<div id="file_list"></div>
 
 {% end %}
